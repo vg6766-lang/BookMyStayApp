@@ -1,72 +1,69 @@
 import java.util.*;
 
+// 1. Define Custom Exceptions for Domain-Specific Errors
+class InvalidRoomTypeException extends Exception {
+    public InvalidRoomTypeException(String message) { super(message); }
+}
+
+class OutOfStockException extends Exception {
+    public OutOfStockException(String message) { super(message); }
+}
+
 public class BookMyStayApp {
 
-    // Model for a Confirmed Reservation
-    static class Reservation {
-        String reservationId;
-        String guestName;
-        String roomType;
-        double totalCost;
+    private static Map<String, Integer> inventory = new HashMap<>();
 
-        Reservation(String id, String name, String type, double cost) {
-            this.reservationId = id;
-            this.guestName = name;
-            this.roomType = type;
-            this.totalCost = cost;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("| %-8s | %-10s | %-8s | $%-8.2f |",
-                    reservationId, guestName, roomType, totalCost);
-        }
+    static {
+        inventory.put("Deluxe", 1); // Only 1 room for testing
+        inventory.put("Suite", 5);
     }
-
-    // Historical Data Store: List preserves insertion order for auditing
-    private static List<Reservation> bookingHistory = new ArrayList<>();
 
     public static void main(String[] args) {
-        System.out.println("--- Simulating Booking Confirmations ---");
+        System.out.println("--- Starting Validated Booking Process ---");
 
-        // 1. Simulate bookings being confirmed and added to history
-        recordBooking(new Reservation("RES-101", "Alice", "Deluxe", 240.0));
-        recordBooking(new Reservation("RES-102", "Bob", "Suite", 450.0));
-        recordBooking(new Reservation("RES-103", "Charlie", "Deluxe", 240.0));
+        // Test Case 1: Valid Booking
+        processBookingRequest("Alice", "Deluxe");
 
-        // 2. Generate the Administrative Report
-        generateBookingReport();
+        // Test Case 2: Invalid Room Type (Case Sensitive check)
+        processBookingRequest("Bob", "deluxe"); // Should fail (lowercase 'd')
+
+        // Test Case 3: Out of Stock
+        processBookingRequest("Charlie", "Deluxe"); // Should fail (already taken)
+
+        // Test Case 4: Non-existent Room Type
+        processBookingRequest("David", "Penthouse");
+
+        System.out.println("\nSystem remains stable after all errors.");
+        System.out.println("Final Inventory State: " + inventory);
     }
 
     /**
-     * Historical Tracking: Adds a confirmed reservation to the audit trail.
+     * Core logic with Fail-Fast Validation and Guarding System State
      */
-    public static void recordBooking(Reservation res) {
-        bookingHistory.add(res);
-        System.out.println("Audit Log: Recorded " + res.reservationId + " for " + res.guestName);
-    }
+    public static void processBookingRequest(String guest, String type) {
+        try {
+            System.out.print("\nProcessing request for " + guest + " (" + type + ")... ");
 
-    /**
-     * Reporting Service: Processes the list to provide operational visibility.
-     */
-    public static void generateBookingReport() {
-        System.out.println("\n============================================");
-        System.out.println("        OFFICIAL BOOKING HISTORY REPORT      ");
-        System.out.println("============================================");
-        System.out.println("| Reg ID   | Guest      | Room     | Total     |");
-        System.out.println("--------------------------------------------");
+            // VALIDATION 1: Check if room type exists
+            if (!inventory.containsKey(type)) {
+                throw new InvalidRoomTypeException("Error: Room type '" + type + "' does not exist.");
+            }
 
-        double revenueTotal = 0;
+            // VALIDATION 2: Check inventory availability
+            if (inventory.get(type) <= 0) {
+                throw new OutOfStockException("Error: No '" + type + "' rooms left in inventory.");
+            }
 
-        // Iterating through the List (Ordered Storage)
-        for (Reservation res : bookingHistory) {
-            System.out.println(res);
-            revenueTotal += res.totalCost;
+            // If we reach here, input is valid. UPDATE STATE.
+            inventory.put(type, inventory.get(type) - 1);
+            System.out.println("SUCCESS: Room allocated.");
+
+        } catch (InvalidRoomTypeException | OutOfStockException e) {
+            // GRACEFUL FAILURE: Catch the specific domain error and print message
+            System.err.println("\n[VALIDATION FAILED] " + e.getMessage());
+        } catch (Exception e) {
+            // CATCH-ALL for unexpected issues
+            System.err.println("\n[SYSTEM ERROR] An unexpected error occurred: " + e.getMessage());
         }
-
-        System.out.println("--------------------------------------------");
-        System.out.println("Total Reservations: " + bookingHistory.size());
-        System.out.printf("Total Revenue Generated: $%.2f\n", revenueTotal);
-        System.out.println("============================================\n");
     }
 }
