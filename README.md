@@ -1,34 +1,37 @@
-#Use Case 11: Concurrent Booking Simulation (Thread Safety)
-Goal: Demonstrate how concurrent access to shared resources can lead to inconsistent system state and show how synchronization ensures correctness under multi-user conditions.
+#Use Case 12: Data Persistence & System Recovery
+Goal: Introduce persistence and recovery concepts by ensuring that critical system state survives application restarts, transitioning learners from in-memory thinking to durable system design.
 
 Actor:
 
-Multiple Guests – submit booking requests concurrently.
-Concurrent Booking Processor – processes booking requests in a multi-threaded environment.
+System – initiates save and restore operations during shutdown and startup.
+Persistence Service – handles storing and retrieving system state from persistent storage.
 Flow:
 
-Multiple guests submit booking requests simultaneously.
-Requests are added to a shared booking queue.
-Threads retrieve requests using synchronized access.
-Room allocation and inventory updates are performed inside critical sections.
-The system completes allocations without conflicts or inconsistencies.
+The system prepares for shutdown.
+Current booking and inventory state is serialized into a persistent format.
+Serialized data is written to a file.
+System restarts.
+Persisted data is loaded from the file.
+Inventory and booking state are restored into memory.
+System resumes operation with recovered state.
 Key Concepts Used
-Race Conditions - Race conditions occur when multiple threads access and modify shared data simultaneously. The final system state becomes dependent on execution timing rather than logic.
-Thread Safety - Thread safety ensures that shared resources behave correctly when accessed by multiple threads. This is critical in systems handling concurrent user actions.
-Shared Mutable State - The booking queue and inventory are shared across threads. Uncontrolled access to shared mutable data can corrupt system state.
-Critical Sections - Critical sections are blocks of code that must be executed by only one thread at a time. Synchronization ensures exclusive access to these sections.
-Synchronized Access - Synchronization mechanisms are used to protect shared resources. This prevents interleaving operations that could lead to double allocation.
-Concurrency vs. Parallelism - Concurrency focuses on correctness when tasks overlap in time. This use case emphasizes correctness over performance optimization.
+Stateful Applications - A stateful application maintains data beyond a single execution cycle. Business systems must preserve state to ensure continuity and correctness.
+Persistence - Persistence refers to storing application state in a durable medium. This prevents data loss caused by restarts, crashes, or redeployments.
+Serialization - Serialization converts in-memory objects into a format suitable for storage. This allows complex data structures to be written to files and later reconstructed.
+Deserialization - Deserialization restores objects from persisted data back into memory. Correct deserialization is essential for accurate system recovery.
+Inventory Snapshot - The inventory state is captured at a point in time. Restoring this snapshot ensures availability reflects the last known valid state.
+Failure Tolerance - The system handles missing or corrupted persistence data safely. This prevents crashes and allows the application to start in a known, valid state.
+Preparation for Database Integration - File-based persistence introduces durability concepts without database complexity. This prepares learners conceptually for future database-backed systems.
 Key Requirements
-Simulate multiple booking requests occurring at the same time.
-Use shared data structures for booking requests and inventory.
-Ensure inventory updates are performed in a thread-safe manner.
-Prevent double allocation under concurrent execution.
-Maintain consistent system state under load.
+Persist booking history and inventory state to a file.
+Restore persisted data during application startup.
+Ensure the restored state accurately reflects the last saved state.
+Handle missing or corrupted persistence files gracefully.
+Allow the system to continue operating safely after recovery.
 Key Benefits
-Safe multi-user booking simulation
-Correct room allocations under concurrent load
-Foundation for building scalable, multi-user systems
+No data loss across application restarts
+More realistic and production-aligned system behavior
+Smooth conceptual transition toward database-backed systems
 Drawbacks of Previous Use Case
-Earlier use cases assumed a single-threaded execution model.
-Such assumptions are unsafe in real production environments where concurrent access is common.
+Earlier use cases relied entirely on in-memory data structures.
+As a result, all business state was lost when the application terminated.
