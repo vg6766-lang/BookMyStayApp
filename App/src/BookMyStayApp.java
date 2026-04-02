@@ -1,55 +1,79 @@
+import java.io.*;
 import java.util.*;
 
 public class BookMyStayApp {
 
-    // Shared Resources
-    private static int inventoryCount = 2; // Limited stock to test race conditions
-    private static List<String> confirmedBookings = new ArrayList<>();
+    private static final String DATA_FILE = "hotel_state.txt";
+    private static Map<String, Integer> inventory = new HashMap<>();
+    private static List<String> bookingHistory = new ArrayList<>();
 
     public static void main(String[] args) {
-        System.out.println("--- Starting Concurrent Booking Simulation ---");
-        System.out.println("Initial Inventory: " + inventoryCount);
+        // 1. SYSTEM STARTUP: Attempt to restore state
+        loadSystemState();
 
-        // Create multiple threads representing different guests booking at once
-        Thread guest1 = new Thread(() -> attemptBooking("Alice"), "Thread-Alice");
-        Thread guest2 = new Thread(() -> attemptBooking("Bob"), "Thread-Bob");
-        Thread guest3 = new Thread(() -> attemptBooking("Charlie"), "Thread-Charlie");
+        System.out.println("--- Current System State ---");
+        System.out.println("Inventory: " + inventory);
+        System.out.println("History: " + bookingHistory);
 
-        // Start threads simultaneously
-        guest1.start();
-        guest2.start();
-        guest3.start();
-
-        // Wait for all threads to finish
-        try {
-            guest1.join();
-            guest2.join();
-            guest3.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        // 2. Simulate new activity if the system was empty
+        if (bookingHistory.isEmpty()) {
+            System.out.println("\nNo previous data found. Creating new records...");
+            inventory.put("Deluxe", 5);
+            inventory.put("Suite", 2);
+            bookingHistory.add("RES-101: Alice (Deluxe)");
+            bookingHistory.add("RES-102: Bob (Suite)");
+        } else {
+            System.out.println("\nResuming operations with recovered data.");
         }
 
-        System.out.println("\n--- Final System Audit ---");
-        System.out.println("Final Inventory: " + inventoryCount);
-        System.out.println("Confirmed Guests: " + confirmedBookings);
+        // 3. SYSTEM SHUTDOWN: Persist state before exiting
+        saveSystemState();
+        System.out.println("\nSystem state saved successfully. You can now restart the app.");
     }
 
     /**
-     * attemptBooking is the CRITICAL SECTION.
-     * The 'synchronized' keyword ensures only ONE thread enters this method at a time.
+     * Serialization: Writing in-memory data to a durable file.
      */
-    public static synchronized void attemptBooking(String guestName) {
-        System.out.println(Thread.currentThread().getName() + " checking inventory...");
+    public static void saveSystemState() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(DATA_FILE))) {
+            // Save Inventory
+            for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
+                writer.println("INV:" + entry.getKey() + ":" + entry.getValue());
+            }
+            // Save History
+            for (String record : bookingHistory) {
+                writer.println("HIS:" + record);
+            }
+        } catch (IOException e) {
+            System.err.println("Error saving system state: " + e.getMessage());
+        }
+    }
 
-        if (inventoryCount > 0) {
-            // Simulate a small delay in processing to expose potential race conditions
-            try { Thread.sleep(100); } catch (InterruptedException e) {}
+    /**
+     * Deserialization: Reconstructing objects from the persisted file.
+     */
+    public static void loadSystemState() {
+        File file = new File(DATA_FILE);
+        if (!file.exists()) {
+            System.out.println("No persistence file found. Starting fresh.");
+            return;
+        }
 
-            inventoryCount--; // Decrement shared state
-            confirmedBookings.add(guestName);
-            System.out.println("SUCCESS: " + guestName + " secured a room.");
-        } else {
-            System.out.println("FAILED: No rooms left for " + guestName);
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(":");
+                if (parts[0].equals("INV")) {
+                    inventory.put(parts[1], Integer.parseInt(parts[2]));
+                } else if (parts[0].equals("HIS")) {
+                    bookingHistory.add(parts[1] + ":" + parts[2]);
+                }
+            }
+            System.out.println("SUCCESS: System state restored from " + DATA_FILE);
+        } catch (IOException | ArrayIndexOutOfBoundsException e) {
+            System.err.println("Failure Tolerance: Persisted data corrupted. Starting fresh.");
+            inventory.clear();
+            bookingHistory.clear();
         }
     }
 }
