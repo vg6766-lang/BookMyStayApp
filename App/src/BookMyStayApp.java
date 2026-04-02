@@ -1,69 +1,66 @@
 import java.util.*;
 
-// 1. Define Custom Exceptions for Domain-Specific Errors
-class InvalidRoomTypeException extends Exception {
-    public InvalidRoomTypeException(String message) { super(message); }
-}
-
-class OutOfStockException extends Exception {
-    public OutOfStockException(String message) { super(message); }
-}
-
 public class BookMyStayApp {
 
+    // Current active reservations: Map<ReservationID, RoomType>
+    private static Map<String, String> activeReservations = new HashMap<>();
+
+    // Inventory: Map<RoomType, Count>
     private static Map<String, Integer> inventory = new HashMap<>();
 
+    // Stack for Rollback: Stores released Room IDs in LIFO order
+    private static Stack<String> releasedRoomsStack = new Stack<>();
+
     static {
-        inventory.put("Deluxe", 1); // Only 1 room for testing
-        inventory.put("Suite", 5);
+        // Initial State
+        inventory.put("Deluxe", 5);
+        activeReservations.put("RES-101", "Deluxe");
+        activeReservations.put("RES-102", "Deluxe");
     }
 
     public static void main(String[] args) {
-        System.out.println("--- Starting Validated Booking Process ---");
+        System.out.println("--- Starting Cancellation Service ---");
+        System.out.println("Initial Inventory: " + inventory);
 
-        // Test Case 1: Valid Booking
-        processBookingRequest("Alice", "Deluxe");
+        // 1. Valid Cancellation
+        cancelBooking("RES-102");
 
-        // Test Case 2: Invalid Room Type (Case Sensitive check)
-        processBookingRequest("Bob", "deluxe"); // Should fail (lowercase 'd')
+        // 2. Invalid Cancellation (Non-existent ID)
+        cancelBooking("RES-999");
 
-        // Test Case 3: Out of Stock
-        processBookingRequest("Charlie", "Deluxe"); // Should fail (already taken)
+        // 3. Attempting to cancel an already cancelled booking
+        cancelBooking("RES-102");
 
-        // Test Case 4: Non-existent Room Type
-        processBookingRequest("David", "Penthouse");
-
-        System.out.println("\nSystem remains stable after all errors.");
-        System.out.println("Final Inventory State: " + inventory);
+        System.out.println("\nFinal Inventory after Rollback: " + inventory);
+        System.out.println("Recently Released Rooms (Stack): " + releasedRoomsStack);
     }
 
     /**
-     * Core logic with Fail-Fast Validation and Guarding System State
+     * Performs a controlled rollback of a booking.
      */
-    public static void processBookingRequest(String guest, String type) {
-        try {
-            System.out.print("\nProcessing request for " + guest + " (" + type + ")... ");
+    public static void cancelBooking(String resId) {
+        System.out.print("\nInitiating cancellation for: " + resId + "... ");
 
-            // VALIDATION 1: Check if room type exists
-            if (!inventory.containsKey(type)) {
-                throw new InvalidRoomTypeException("Error: Room type '" + type + "' does not exist.");
-            }
-
-            // VALIDATION 2: Check inventory availability
-            if (inventory.get(type) <= 0) {
-                throw new OutOfStockException("Error: No '" + type + "' rooms left in inventory.");
-            }
-
-            // If we reach here, input is valid. UPDATE STATE.
-            inventory.put(type, inventory.get(type) - 1);
-            System.out.println("SUCCESS: Room allocated.");
-
-        } catch (InvalidRoomTypeException | OutOfStockException e) {
-            // GRACEFUL FAILURE: Catch the specific domain error and print message
-            System.err.println("\n[VALIDATION FAILED] " + e.getMessage());
-        } catch (Exception e) {
-            // CATCH-ALL for unexpected issues
-            System.err.println("\n[SYSTEM ERROR] An unexpected error occurred: " + e.getMessage());
+        // VALIDATION: Does the reservation exist?
+        if (!activeReservations.containsKey(resId)) {
+            System.err.println("FAILED: Reservation ID not found or already cancelled.");
+            return;
         }
+
+        // 1. Identify the Room Type to rollback
+        String type = activeReservations.get(resId);
+
+        // 2. Perform STATE REVERSAL (Inventory Restoration)
+        inventory.put(type, inventory.get(type) + 1);
+
+        // 3. LIFO ROLLBACK: Push the room "resource" onto the stack
+        // (Simulating the return of a specific room ID to the pool)
+        String releasedRoomId = "ROOM-" + resId.split("-")[1];
+        releasedRoomsStack.push(releasedRoomId);
+
+        // 4. Remove from active records
+        activeReservations.remove(resId);
+
+        System.out.println("SUCCESS: Inventory incremented and Room ID " + releasedRoomId + " released.");
     }
 }
