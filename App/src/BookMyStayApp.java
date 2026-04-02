@@ -2,69 +2,71 @@ import java.util.*;
 
 public class BookMyStayApp {
 
-    // Model for an Add-On Service
-    static class Service {
-        String name;
-        double price;
+    // Model for a Confirmed Reservation
+    static class Reservation {
+        String reservationId;
+        String guestName;
+        String roomType;
+        double totalCost;
 
-        Service(String name, double price) {
-            this.name = name;
-            this.price = price;
+        Reservation(String id, String name, String type, double cost) {
+            this.reservationId = id;
+            this.guestName = name;
+            this.roomType = type;
+            this.totalCost = cost;
         }
 
         @Override
         public String toString() {
-            return name + " ($" + price + ")";
+            return String.format("| %-8s | %-10s | %-8s | $%-8.2f |",
+                    reservationId, guestName, roomType, totalCost);
         }
     }
 
-    // Mapping: Reservation ID -> List of Selected Services
-    private static Map<String, List<Service>> reservationAddOns = new HashMap<>();
+    // Historical Data Store: List preserves insertion order for auditing
+    private static List<Reservation> bookingHistory = new ArrayList<>();
 
     public static void main(String[] args) {
-        // Assume these IDs were generated in Use Case 6
-        String resId1 = "RES-101";
-        String resId2 = "RES-102";
+        System.out.println("--- Simulating Booking Confirmations ---");
 
-        System.out.println("--- Selecting Add-On Services ---");
+        // 1. Simulate bookings being confirmed and added to history
+        recordBooking(new Reservation("RES-101", "Alice", "Deluxe", 240.0));
+        recordBooking(new Reservation("RES-102", "Bob", "Suite", 450.0));
+        recordBooking(new Reservation("RES-103", "Charlie", "Deluxe", 240.0));
 
-        // 1. Guest 1 selects multiple services
-        addServiceToReservation(resId1, new Service("Breakfast Buffet", 25.0));
-        addServiceToReservation(resId1, new Service("Late Check-out", 15.0));
-
-        // 2. Guest 2 selects one service
-        addServiceToReservation(resId2, new Service("Airport Shuttle", 40.0));
-
-        // 3. Display and Calculate Costs
-        displayReservationDetails(resId1);
-        displayReservationDetails(resId2);
+        // 2. Generate the Administrative Report
+        generateBookingReport();
     }
 
-    public static void addServiceToReservation(String resId, Service service) {
-        // If the ID isn't in the map, initialize a new ArrayList
-        reservationAddOns.putIfAbsent(resId, new ArrayList<>());
-
-        // Add the service to the list (One-to-Many)
-        reservationAddOns.get(resId).add(service);
-
-        System.out.println("Added " + service.name + " to Reservation: " + resId);
+    /**
+     * Historical Tracking: Adds a confirmed reservation to the audit trail.
+     */
+    public static void recordBooking(Reservation res) {
+        bookingHistory.add(res);
+        System.out.println("Audit Log: Recorded " + res.reservationId + " for " + res.guestName);
     }
 
-    public static void displayReservationDetails(String resId) {
-        System.out.println("\n--- Summary for " + resId + " ---");
+    /**
+     * Reporting Service: Processes the list to provide operational visibility.
+     */
+    public static void generateBookingReport() {
+        System.out.println("\n============================================");
+        System.out.println("        OFFICIAL BOOKING HISTORY REPORT      ");
+        System.out.println("============================================");
+        System.out.println("| Reg ID   | Guest      | Room     | Total     |");
+        System.out.println("--------------------------------------------");
 
-        List<Service> services = reservationAddOns.getOrDefault(resId, new ArrayList<>());
+        double revenueTotal = 0;
 
-        if (services.isEmpty()) {
-            System.out.println("No add-on services selected.");
-        } else {
-            double totalCost = 0;
-            System.out.println("Services Selected:");
-            for (Service s : services) {
-                System.out.println(" - " + s);
-                totalCost += s.price;
-            }
-            System.out.println("Total Additional Cost: $" + totalCost);
+        // Iterating through the List (Ordered Storage)
+        for (Reservation res : bookingHistory) {
+            System.out.println(res);
+            revenueTotal += res.totalCost;
         }
+
+        System.out.println("--------------------------------------------");
+        System.out.println("Total Reservations: " + bookingHistory.size());
+        System.out.printf("Total Revenue Generated: $%.2f\n", revenueTotal);
+        System.out.println("============================================\n");
     }
 }
