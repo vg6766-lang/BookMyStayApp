@@ -1,4 +1,7 @@
+
 #Use Case 10: Booking Cancellation & Inventory Rollback
+# Use Case 10: Booking Cancellation & Inventory Rollback
+
 Goal: Enable safe cancellation of confirmed bookings by correctly reversing system state changes, ensuring inventory consistency and predictable recovery behavior.
 
 Actor:
