@@ -1,35 +1,35 @@
-# Use Case 6: Reservation Confirmation & Room Allocation
-Goal: Confirm booking requests by assigning rooms safely while ensuring inventory consistency and preventing double-booking under all circumstances.
+#Use Case 7: Add-On Service Selection
+Goal: Extend the booking model to support optional services, demonstrating how real-world business features can be added without modifying core booking or allocation logic.
 
 Actor:
 
-Booking Service – processes queued booking requests and performs room allocation.
-Inventory Service – maintains and updates room availability state.
+Guest – selects optional services for an existing reservation.
+Add-On Service – represents an individual optional offering.
+Add-On Service Manager – manages the association between reservations and selected services.
 Flow:
 
-Booking request is dequeued from the request queue.
-The system checks availability for the requested room type.
-A unique room ID is generated and assigned.
-The room ID is recorded to prevent reuse.
-Inventory count is decremented immediately.
-Reservation is confirmed.
+Guest selects one or more add-on services.
+Selected services are added to a list.
+The list of services is mapped to the corresponding reservation ID.
+Additional cost for the reservation is calculated.
+Core booking and inventory state remain unchanged.
 Key Concepts Used
-Problem of Double Booking - Without controlled allocation, the same room may be assigned to multiple guests. This results in room ID collisions and inconsistent system state.
-Set Data Structure - A Set<String> is used to store allocated room IDs. Sets enforce uniqueness by design, preventing duplicate room assignments.
-Uniqueness Enforcement - By checking against an existing set of room IDs, the system guarantees that no room is assigned more than once. This removes the need for manual duplicate checks.
-Mapping Room Types to Assigned Rooms - A HashMap<String, Set<String>> maps each room type to its allocated room IDs. This allows grouped tracking and simplifies validation and reporting.
-Atomic Logical Operations - Room allocation is treated as a single logical unit. Assignment and inventory update occur together to avoid partial or inconsistent state.
-Inventory Synchronization - Inventory is updated immediately after allocation. This ensures that availability reflects the current system state at all times.
+Business Extensibility - Real-world bookings often include additional offerings beyond the primary product. The system must support new features without disrupting existing logic.
+One-to-Many Relationship - A single reservation can have multiple associated services. This relationship is modeled using a map from reservation ID to a list of services.
+Map and List Combination - Map<String, List<Service>> allows efficient lookup of services for a reservation. Lists preserve insertion order and allow multiple services to be attached.
+Composition over Inheritance - Services are composed with reservations rather than inherited. This avoids rigid class hierarchies and supports flexible feature growth.
+Separation of Core and Optional Features - Add-on services are managed independently of room allocation and inventory. This prevents optional features from complicating critical booking workflows.
+Cost Aggregation - Service costs are calculated separately and combined when needed. This keeps pricing logic modular and easier to extend.
 Key Requirements
-Retrieve booking requests from the queue in FIFO order.
-Generate and assign a unique room ID for each confirmed reservation.
-Prevent reuse of room IDs across all allocations.
-Update inventory immediately after successful allocation.
-Ensure allocation logic maintains system consistency.
+Allow multiple services to be attached to a single reservation.
+Store selected services using a reservation-to-services mapping.
+Calculate total additional cost for selected services.
+Ensure add-on logic does not modify booking or inventory state.
+Support easy addition of new service types.
 Key Benefits
-Guaranteed uniqueness of room assignments
-Immediate synchronization between booking and inventory
-Elimination of double-booking scenarios
+Flexible attachment of optional services to reservations
+Clean mapping between bookings and value-added features
+Easy expansion of services without core booking changes
 Drawbacks of Previous Use Case
-Use Case 5 handled request ordering but did not confirm bookings.
-Without allocation and uniqueness enforcement, queued requests could still result in conflicting assignments.
+Use Case 6 confirmed room allocation but treated bookings as static entities.
+Without add-on support, the system could not model common real-world booking enhancements.
