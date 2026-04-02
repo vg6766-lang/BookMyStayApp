@@ -1,98 +1,66 @@
-
-
-// Version 5.1
-
 import java.util.*;
 
-// -------------------- RESERVATION (REQUEST OBJECT) --------------------
-class Reservation {
+public class BookMyStayApp {
 
-    private String guestName;
-    private String roomType;
+    // Current active reservations: Map<ReservationID, RoomType>
+    private static Map<String, String> activeReservations = new HashMap<>();
 
-    public Reservation(String guestName, String roomType) {
-        this.guestName = guestName;
-        this.roomType = roomType;
+    // Inventory: Map<RoomType, Count>
+    private static Map<String, Integer> inventory = new HashMap<>();
+
+    // Stack for Rollback: Stores released Room IDs in LIFO order
+    private static Stack<String> releasedRoomsStack = new Stack<>();
+
+    static {
+        // Initial State
+        inventory.put("Deluxe", 5);
+        activeReservations.put("RES-101", "Deluxe");
+        activeReservations.put("RES-102", "Deluxe");
     }
 
-    public String getGuestName() {
-        return guestName;
+    public static void main(String[] args) {
+        System.out.println("--- Starting Cancellation Service ---");
+        System.out.println("Initial Inventory: " + inventory);
+
+        // 1. Valid Cancellation
+        cancelBooking("RES-102");
+
+        // 2. Invalid Cancellation (Non-existent ID)
+        cancelBooking("RES-999");
+
+        // 3. Attempting to cancel an already cancelled booking
+        cancelBooking("RES-102");
+
+        System.out.println("\nFinal Inventory after Rollback: " + inventory);
+        System.out.println("Recently Released Rooms (Stack): " + releasedRoomsStack);
     }
 
-    public String getRoomType() {
-        return roomType;
-    }
+    /**
+     * Performs a controlled rollback of a booking.
+     */
+    public static void cancelBooking(String resId) {
+        System.out.print("\nInitiating cancellation for: " + resId + "... ");
 
-    public void displayReservation() {
-        System.out.println("Guest: " + guestName + " | Requested Room: " + roomType);
-    }
-}
-
-// -------------------- BOOKING REQUEST QUEUE --------------------
-class BookingRequestQueue {
-
-    private Queue<Reservation> requestQueue;
-
-    public BookingRequestQueue() {
-        requestQueue = new LinkedList<>();
-    }
-
-    // Add booking request (enqueue)
-    public void addRequest(Reservation reservation) {
-        requestQueue.offer(reservation);
-        System.out.println("Request added for " + reservation.getGuestName());
-    }
-
-    // View all queued requests (without removing)
-    public void viewRequests() {
-        System.out.println("\n===== Booking Request Queue =====");
-
-        if (requestQueue.isEmpty()) {
-            System.out.println("No pending requests.");
+        // VALIDATION: Does the reservation exist?
+        if (!activeReservations.containsKey(resId)) {
+            System.err.println("FAILED: Reservation ID not found or already cancelled.");
             return;
         }
 
-        for (Reservation r : requestQueue) {
-            r.displayReservation();
-        }
+        // 1. Identify the Room Type to rollback
+        String type = activeReservations.get(resId);
 
-        System.out.println("=================================");
-    }
+        // 2. Perform STATE REVERSAL (Inventory Restoration)
+        inventory.put(type, inventory.get(type) + 1);
 
-    // Get next request (peek only, no removal)
-    public Reservation peekNextRequest() {
-        return requestQueue.peek();
-    }
-}
+        // 3. LIFO ROLLBACK: Push the room "resource" onto the stack
+        // (Simulating the return of a specific room ID to the pool)
+        String releasedRoomId = "ROOM-" + resId.split("-")[1];
+        releasedRoomsStack.push(releasedRoomId);
 
-// -------------------- MAIN CLASS --------------------
-public class BookMyStayApp {
+        // 4. Remove from active records
+        activeReservations.remove(resId);
 
-    public static void main(String[] args) {
-
-        // Initialize Queue
-        BookingRequestQueue bookingQueue = new BookingRequestQueue();
-
-        // Simulate Incoming Booking Requests
-        Reservation r1 = new Reservation("Alice", "Single Room");
-        Reservation r2 = new Reservation("Bob", "Double Room");
-        Reservation r3 = new Reservation("Charlie", "Suite Room");
-        Reservation r4 = new Reservation("Diana", "Single Room");
-
-        // Add requests to queue (FIFO order)
-        bookingQueue.addRequest(r1);
-        bookingQueue.addRequest(r2);
-        bookingQueue.addRequest(r3);
-        bookingQueue.addRequest(r4);
-
-        // View all requests
-        bookingQueue.viewRequests();
-
-        // Peek next request (without removing)
-        System.out.println("\nNext request to process (FIFO):");
-        Reservation next = bookingQueue.peekNextRequest();
-        if (next != null) {
-            next.displayReservation();
-        }
+        System.out.println("SUCCESS: Inventory incremented and Room ID " + releasedRoomId + " released.");
     }
 }

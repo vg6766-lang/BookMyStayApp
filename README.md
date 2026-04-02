@@ -1,35 +1,35 @@
-# Use Case 5: Booking Request (First-Come-First-Served)
-Goal: Handle multiple booking requests fairly by introducing a request intake mechanism that preserves arrival order, reflecting real-world booking behavior during peak demand.
+# Use Case 10: Booking Cancellation & Inventory Rollback
+Goal: Enable safe cancellation of confirmed bookings by correctly reversing system state changes, ensuring inventory consistency and predictable recovery behavior.
 
 Actor:
 
-Reservation – represents a guest’s intent to book a room.
-Booking Request Queue – manages and orders incoming booking requests.
+Guest – initiates a cancellation request for an existing booking.
+Cancellation Service – validates cancellations and performs controlled rollback operations.
 Flow:
 
-Guest submits a booking request.
-The request is added to the booking queue.
-Requests are stored in arrival order.
-Queued requests wait for processing by the allocation system.
-No inventory mutation occurs at this stage.
+Guest initiates a cancellation request.
+The system validates the reservation to ensure it exists and is cancellable.
+The allocated room ID is recorded in a rollback structure.
+Inventory count for the corresponding room type is incremented.
+Booking history is updated to reflect the cancellation.
+System state is restored consistently.
 Key Concepts Used
-Problem of Simultaneous Requests - During peak demand, multiple booking requests can arrive at nearly the same time. Without ordering, requests may be processed inconsistently, leading to unfair allocation.
-Queue Data Structure - A Queue<Reservation> is used to store booking requests.
-Queues naturally model waiting lines where elements are processed in sequence.
-FIFO Principle - FIFO (First-Come-First-Served) ensures that the earliest request is processed first. This mirrors fairness expectations in real booking systems.
-Fairness - Using a queue guarantees that no request can bypass another. All guests are treated equally based on request arrival time.
-Request Ordering - The queue preserves insertion order automatically. This eliminates the need for manual sorting or timestamp comparison.
-Decoupling Request Intake from Allocation - Requests are collected first and processed later. This separation prepares the system for controlled allocation and concurrency handling.
+State Reversal - Cancellation requires undoing previously completed operations. The system must revert inventory and booking state without introducing inconsistencies.
+Stack Data Structure - A Stack<String> is used to track recently released room IDs. Stacks follow a Last-In-First-Out (LIFO) order, which naturally models rollback behavior.
+LIFO Rollback Logic - The most recent allocation is the first to be reversed. This aligns with real-world undo operations and simplifies recovery logic.
+Controlled Mutation - State changes during cancellation are performed in a strict, predefined order. This prevents partial rollbacks and protects system integrity.
+Inventory Restoration - Inventory counts are incremented immediately after cancellation. This ensures availability accurately reflects the current system state.
+Validation of Cancellation Requests - The system verifies that a reservation exists before allowing cancellation. Invalid or duplicate cancellation attempts are rejected safely.
 Key Requirements
-Accept booking requests from guests.
-Store requests in a queue structure.
-Preserve the order in which requests arrive.
-Ensure no room allocation or inventory updates occur at this stage.
-Prepare requests for subsequent processing.
+Allow cancellation of confirmed bookings only.
+Validate reservation existence before performing rollback.
+Release allocated room IDs back to the availability pool.
+Restore inventory counts accurately and immediately.
+Prevent cancellation of non-existent or already cancelled bookings.
 Key Benefits
-Fair and deterministic booking request handling
-Predictable system behavior under peak load
-Simplified request coordination before allocation
+Safe recovery of inventory after cancellations
+Consistent system state across the booking lifecycle
+Controlled and predictable rollback behavior
 Drawbacks of Previous Use Case
-Use Case 4 allowed room visibility but did not handle booking intent.
-Without a request intake mechanism, simultaneous booking attempts could not be managed fairly.
+Use Case 9 focused on input validation but did not address reversing valid operations.
+Without rollback support, confirmed bookings could not be safely undone.
