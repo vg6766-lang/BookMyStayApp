@@ -1,35 +1,34 @@
-#Use Case 7: Add-On Service Selection
-Goal: Extend the booking model to support optional services, demonstrating how real-world business features can be added without modifying core booking or allocation logic.
+#Use Case 9: Error Handling & Validation
+Goal: Strengthen system reliability by introducing structured validation and error handling, ensuring that invalid inputs and inconsistent states are detected and handled early.
 
 Actor:
 
-Guest – selects optional services for an existing reservation.
-Add-On Service – represents an individual optional offering.
-Add-On Service Manager – manages the association between reservations and selected services.
+Guest – provides booking input that must be validated.
+Invalid Booking Validator – validates input and system state before processing requests.
 Flow:
 
-Guest selects one or more add-on services.
-Selected services are added to a list.
-The list of services is mapped to the corresponding reservation ID.
-Additional cost for the reservation is calculated.
-Core booking and inventory state remain unchanged.
+Guest provides booking input.
+System validates input values and system constraints.
+If validation fails, an error is raised immediately.
+A meaningful failure message is displayed.
+The system prevents invalid state changes and continues running safely.
 Key Concepts Used
-Business Extensibility - Real-world bookings often include additional offerings beyond the primary product. The system must support new features without disrupting existing logic.
-One-to-Many Relationship - A single reservation can have multiple associated services. This relationship is modeled using a map from reservation ID to a list of services.
-Map and List Combination - Map<String, List<Service>> allows efficient lookup of services for a reservation. Lists preserve insertion order and allow multiple services to be attached.
-Composition over Inheritance - Services are composed with reservations rather than inherited. This avoids rigid class hierarchies and supports flexible feature growth.
-Separation of Core and Optional Features - Add-on services are managed independently of room allocation and inventory. This prevents optional features from complicating critical booking workflows.
-Cost Aggregation - Service costs are calculated separately and combined when needed. This keeps pricing logic modular and easier to extend.
+Input Validation - Validation ensures that incoming data conforms to expected rules before processing. This prevents invalid or inconsistent data from entering the system.
+Custom Exceptions - Domain-specific exceptions are used to represent invalid booking scenarios. Custom exceptions make error causes explicit and improve code readability.
+Fail-Fast Design - The system detects errors as early as possible and stops further processing. This avoids cascading failures and simplifies debugging.
+Guarding System State - Checks are performed before inventory updates or allocations. This ensures that critical state, such as availability counts, remains valid.
+Graceful Failure Handling - Errors are communicated clearly without crashing the application. This improves system usability and maintainability.
+Correctness over Happy Path - The system is designed to handle incorrect usage, not just ideal scenarios. This reflects real-world conditions where invalid input is common.
 Key Requirements
-Allow multiple services to be attached to a single reservation.
-Store selected services using a reservation-to-services mapping.
-Calculate total additional cost for selected services.
-Ensure add-on logic does not modify booking or inventory state.
-Support easy addition of new service types.
+Validate room types before processing bookings.
+Prevent inventory from reaching invalid or negative values.
+Throw and handle custom exceptions for invalid scenarios.
+Display clear and informative failure messages.
+Ensure the system remains stable after errors.
 Key Benefits
-Flexible attachment of optional services to reservations
-Clean mapping between bookings and value-added features
-Easy expansion of services without core booking changes
+Early detection of invalid system states
+Reduced risk of silent data corruption
+More stable and predictable application behavior
 Drawbacks of Previous Use Case
-Use Case 6 confirmed room allocation but treated bookings as static entities.
-Without add-on support, the system could not model common real-world booking enhancements.
+Use Case 8 focused on storing and reporting booking data but assumed valid input.
+Without validation, incorrect data could corrupt system state and reports.
